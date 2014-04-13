@@ -12,12 +12,17 @@ module Sound.SDL.Mixer
   , openAudio
   , allocateChannels
   , querySpec
+  , loadWAVRW
+  , loadMUS
   ) where
 
 import Foreign
+import Foreign.C.String
 import Prelude hiding (init)
+import Graphics.UI.SDL.Types
 import Graphics.UI.SDL.Audio (AudioFormat(..), fromAudioFormat, toAudioFormat)
 import Graphics.UI.SDL.Error (getError)
+import Sound.SDL.Mixer.Types
 
 -- Error handling until something better is decided on in the main lib.
 handleErrorI :: (Num a, Ord a) => String -> a -> (a -> IO b) -> IO b
@@ -93,4 +98,20 @@ querySpec =
       format   <- fmap toAudioFormat $ peek format'
       channels <- fmap fromIntegral $ peek channels'
       return (freq, format, channels)
+
+foreign import ccall unsafe "Mix_LoadWAV_RW"
+  mixLoadWAVRW' :: Ptr RWopsStruct -> #{type int} -> IO (Ptr Chunk)
+
+loadWAVRW :: RWops -> Bool -> IO Chunk
+loadWAVRW rwops dofree =
+  withForeignPtr rwops $ \rwops' ->
+    mixLoadWAVRW' rwops' (fromBool dofree) >>= peek
+
+foreign import ccall unsafe "Mix_LoadMUS"
+  mixLoadMUS' :: CString -> IO (Ptr MusicStruct)
+
+loadMUS :: String -> IO Music
+loadMUS fname =
+  withCString fname $ \fname' ->
+    mixLoadMUS' fname' >>= mkFinalizedMusic
 

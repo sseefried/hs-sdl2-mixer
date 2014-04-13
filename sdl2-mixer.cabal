@@ -16,7 +16,8 @@ library
   default-language: Haskell2010
   default-extensions:
     CPP,
-    ForeignFunctionInterface
+    ForeignFunctionInterface,
+    RecordWildCards
   includes:
     SDL.h,
     SDL_mixer.h
@@ -28,5 +29,6 @@ library
     SDL2
   ghc-options: -Wall
   exposed-modules:     
-    Sound.SDL.Mixer
+    Sound.SDL.Mixer,
+    Sound.SDL.Mixer.Types
 
