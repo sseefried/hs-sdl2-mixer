@@ -7,6 +7,16 @@ module Sound.SDL.Mixer
   , initMP3
   , initOGG
   , initFLUIDSYNTH
+  , musicTypeNONE
+  , musicTypeCMD
+  , musicTypeWAV
+  , musicTypeMOD
+  , musicTypeMID
+  , musicTypeOGG
+  , musicTypeMP3
+  , musicTypeMAD
+  , musicTypeFLAC
+  , musicTypeMODPLUG
   , init
   , quit
   , openAudio
@@ -14,6 +24,9 @@ module Sound.SDL.Mixer
   , querySpec
   , loadWAVRW
   , loadMUS
+  , loadMUSRW
+  , loadMUSTypeRW
+  , quickLoadWav
   ) where
 
 import Foreign
@@ -52,6 +65,22 @@ newtype MixInitFlag
 
 combineMixInitFlag :: [MixInitFlag] -> MixInitFlag
 combineMixInitFlag = MixInitFlag . foldr ((.|.) . unwrapMixInitFlag) 0
+
+newtype MusicType
+      = MusicType { unwrapMusicType :: #{type Mix_MusicType} }
+
+#{enum MusicType, MusicType
+ , musicTypeNONE = MUS_NONE
+ , musicTypeCMD = MUS_CMD
+ , musicTypeWAV = MUS_WAV
+ , musicTypeMOD = MUS_MOD
+ , musicTypeMID = MUS_MID
+ , musicTypeOGG = MUS_OGG
+ , musicTypeMP3 = MUS_MP3
+ , musicTypeMAD = MUS_MP3_MAD
+ , musicTypeFLAC = MUS_FLAC
+ , musicTypeMODPLUG = MUS_MODPLUG
+ }
 
 foreign import ccall unsafe "Mix_Init"
   mixInit' :: #{type int} -> IO ()
@@ -114,4 +143,27 @@ loadMUS :: String -> IO Music
 loadMUS fname =
   withCString fname $ \fname' ->
     mixLoadMUS' fname' >>= mkFinalizedMusic
+
+foreign import ccall unsafe "Mix_LoadMUS_RW"
+  mixLoadMUSRW' :: Ptr RWopsStruct -> #{type int} -> IO (Ptr MusicStruct)
+
+loadMUSRW :: RWops -> Bool -> IO Music
+loadMUSRW rwops dofree =
+  withForeignPtr rwops $ \rwops' ->
+    mixLoadMUSRW' rwops' (fromBool dofree) >>= mkFinalizedMusic
+
+foreign import ccall unsafe "Mix_LoadMUSType_RW"
+  mixLoadMUSTypeRW' :: Ptr RWopsStruct -> #{type Mix_MusicType} -> #{type int} -> IO (Ptr MusicStruct)
+
+loadMUSTypeRW :: RWops -> MusicType -> Bool -> IO Music
+loadMUSTypeRW rwops mt dofree =
+  withForeignPtr rwops $ \rwops' ->
+    mixLoadMUSTypeRW' rwops' (unwrapMusicType mt) (fromBool dofree) >>= mkFinalizedMusic
+
+foreign import ccall unsafe "Mix_QuickLoad_WAV"
+  mixQuickLoadWAV' :: Ptr #{type Uint8} -> IO (Ptr MusicStruct)
+
+quickLoadWav :: Ptr #{type Uint8} -> IO Music
+quickLoadWav mem =
+  mixQuickLoadWAV' mem >>= mkFinalizedMusic
 
