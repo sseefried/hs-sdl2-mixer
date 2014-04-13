@@ -11,11 +11,12 @@ module Sound.SDL.Mixer
   , quit
   , openAudio
   , allocateChannels
+  , querySpec
   ) where
 
 import Foreign
 import Prelude hiding (init)
-import Graphics.UI.SDL.Audio (AudioFormat(..), fromAudioFormat)
+import Graphics.UI.SDL.Audio (AudioFormat(..), fromAudioFormat, toAudioFormat)
 import Graphics.UI.SDL.Error (getError)
 
 -- Error handling until something better is decided on in the main lib.
@@ -77,4 +78,19 @@ allocateChannels :: Int -> IO ()
 allocateChannels numchans = do
   ret <- mixAllocateChannels' (fromIntegral numchans)
   handleErrorI "allocateChannels" ret (const $ return ())
+
+foreign import ccall unsafe "Mix_QuerySpec"
+  mixQuerySpec' :: Ptr #{type int} -> Ptr #{type Uint16} -> Ptr #{type int} -> IO #{type int}
+
+querySpec :: IO (Int, AudioFormat, Int)
+querySpec =
+  alloca $ \freq' ->
+  alloca $ \format' ->
+  alloca $ \channels' -> do
+    ret <- mixQuerySpec' freq' format' channels'
+    handleErrorI "querySpec" ret $ \_ -> do
+      freq     <- fmap fromIntegral $ peek freq'
+      format   <- fmap toAudioFormat $ peek format'
+      channels <- fmap fromIntegral $ peek channels'
+      return (freq, format, channels)
 
