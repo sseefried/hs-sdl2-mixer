@@ -7,16 +7,6 @@ module Sound.SDL.Mixer
   , initMP3
   , initOGG
   , initFLUIDSYNTH
-  , musicTypeNONE
-  , musicTypeCMD
-  , musicTypeWAV
-  , musicTypeMOD
-  , musicTypeMID
-  , musicTypeOGG
-  , musicTypeMP3
-  , musicTypeMAD
-  , musicTypeFLAC
-  , musicTypeMODPLUG
   , init
   , quit
   , openAudio
@@ -32,6 +22,12 @@ module Sound.SDL.Mixer
   , getChunkDecoder
   , getNumMusicDecoders
   , getMusicDecoder
+  , getMusicType
+  , setPanning
+  , setPosition
+  , setDistance
+  , setReverseStereo
+  , reserveChannels
   ) where
 
 import Foreign
@@ -72,22 +68,6 @@ newtype MixInitFlag
 
 combineMixInitFlag :: [MixInitFlag] -> MixInitFlag
 combineMixInitFlag = MixInitFlag . foldr ((.|.) . unwrapMixInitFlag) 0
-
-newtype MusicType
-      = MusicType { unwrapMusicType :: #{type Mix_MusicType} }
-
-#{enum MusicType, MusicType
- , musicTypeNONE = MUS_NONE
- , musicTypeCMD = MUS_CMD
- , musicTypeWAV = MUS_WAV
- , musicTypeMOD = MUS_MOD
- , musicTypeMID = MUS_MID
- , musicTypeOGG = MUS_OGG
- , musicTypeMP3 = MUS_MP3
- , musicTypeMAD = MUS_MP3_MAD
- , musicTypeFLAC = MUS_FLAC
- , musicTypeMODPLUG = MUS_MODPLUG
- }
 
 foreign import ccall unsafe "Mix_Init"
   mixInit' :: #{type int} -> IO ()
@@ -165,7 +145,7 @@ foreign import ccall unsafe "Mix_LoadMUSType_RW"
 loadMUSTypeRW :: RWops -> MusicType -> Bool -> IO Music
 loadMUSTypeRW rwops mt dofree =
   withForeignPtr rwops $ \rwops' ->
-    mixLoadMUSTypeRW' rwops' (unwrapMusicType mt) (fromBool dofree) >>= mkFinalizedMusic
+    mixLoadMUSTypeRW' rwops' (musicTypeToConstant mt) (fromBool dofree) >>= mkFinalizedMusic
 
 foreign import ccall unsafe "Mix_QuickLoad_WAV"
   mixQuickLoadWAV' :: Ptr #{type Uint8} -> IO (Ptr Chunk)
@@ -208,4 +188,97 @@ foreign import ccall unsafe "Mix_GetMusicDecoder"
 getMusicDecoder :: Int -> IO String
 getMusicDecoder index =
   mixGetMusicDecoder' (fromIntegral index) >>= peekCString
+
+foreign import ccall unsafe "Mix_GetMusicType"
+  mixGetMusicType' :: Ptr MusicStruct -> IO #{type Mix_MusicType}
+
+getMusicType :: Music -> IO MusicType
+getMusicType music =
+  withForeignPtr music $ \music' ->
+    mixGetMusicType' music' >>= return . constantToMusicType
+
+musicTypeToConstant :: MusicType -> #{type Mix_MusicType}
+musicTypeToConstant NONE = #{const MUS_NONE}
+musicTypeToConstant CMD = #{const MUS_CMD}
+musicTypeToConstant WAV = #{const MUS_WAV}
+musicTypeToConstant MOD = #{const MUS_MOD}
+musicTypeToConstant MID = #{const MUS_MID}
+musicTypeToConstant OGG = #{const MUS_OGG}
+musicTypeToConstant MP3 = #{const MUS_MP3}
+musicTypeToConstant MP3_MAD = #{const MUS_MP3_MAD}
+musicTypeToConstant FLAC = #{const MUS_FLAC}
+musicTypeToConstant MODPLUG = #{const MUS_MODPLUG}
+
+constantToMusicType :: #{type Mix_MusicType} -> MusicType
+constantToMusicType #{const MUS_NONE} = NONE
+constantToMusicType #{const MUS_CMD} = CMD
+constantToMusicType #{const MUS_WAV} = WAV
+constantToMusicType #{const MUS_MOD} = MOD
+constantToMusicType #{const MUS_MID} = MID
+constantToMusicType #{const MUS_OGG} = OGG
+constantToMusicType #{const MUS_MP3} = MP3
+constantToMusicType #{const MUS_MP3_MAD} = MP3_MAD
+constantToMusicType #{const MUS_FLAC} = FLAC
+constantToMusicType #{const MUS_MODPLUG} = MODPLUG
+constantToMusicType _ = error "invalid music type"
+
+{- TODO
+Mix_SetPostMix
+Mix_HoolMusic
+Mix_HookMusicFinished
+Mix_GetMusicHookData
+Mix_ChannelFinished
+Mix_RegisterEffect
+Mix_UnregisterEffect
+Mix_UnregisterAllEffects
+--}
+
+foreign import ccall unsafe "Mix_SetPanning"
+  mixSetPanning' :: #{type int} -> #{type Uint8} -> #{type Uint8} -> IO #{type int}
+
+setPanning :: Int -> Int -> Int -> IO ()
+setPanning channel left right = do
+  let channel' = fromIntegral channel
+      left'    = fromIntegral left
+      right'   = fromIntegral right
+  ret <- mixSetPanning' channel' left' right'
+  handleErrorI "setPanning" ret $ (const $ return ())
+
+foreign import ccall unsafe "Mix_SetPosition"
+  mixSetPosition' :: #{type int} -> #{type Sint16} -> #{type Uint8} -> IO #{type int}
+
+setPosition :: Int -> Int -> Int -> IO ()
+setPosition channel angle distance = do
+  let channel'  = fromIntegral channel
+      angle'    = fromIntegral angle
+      distance' = fromIntegral distance
+  ret <- mixSetPosition' channel' angle' distance'
+  handleErrorI "setPosition" ret $ (const $ return ())
+
+foreign import ccall unsafe "Mix_SetDistance"
+  mixSetDistance' :: #{type int} -> #{type Uint8} -> IO #{type int}
+
+setDistance :: Int -> Int -> IO ()
+setDistance channel distance = do
+  let channel'  = fromIntegral channel
+      distance' = fromIntegral distance
+  ret <- mixSetDistance' channel' distance'
+  handleErrorI "setDistance" ret $ (const $ return ())
+
+foreign import ccall unsafe "Mix_SetReverseStereo"
+  mixSetReverseStereo' :: #{type int} -> #{type int} -> IO #{type int}
+
+setReverseStereo :: Int -> Bool -> IO ()
+setReverseStereo channel doflip = do
+  let channel' = fromIntegral channel
+  ret <- mixSetReverseStereo' channel' (fromBool doflip)
+  handleErrorI "setReverseStereo" ret $ (const $ return ())
+
+foreign import ccall unsafe "Mix_ReserveChannels"
+  mixReserveChannels' :: #{type int} -> IO #{type int}
+
+reserveChannels :: Int -> IO ()
+reserveChannels num = do
+  ret <- mixReserveChannels' (fromIntegral num)
+  handleErrorI "reserveChannels" ret $ (const $ return ())
 

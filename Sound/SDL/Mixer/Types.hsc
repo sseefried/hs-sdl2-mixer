@@ -3,6 +3,7 @@ module Sound.SDL.Mixer.Types
   ( Chunk(..)
   , MusicStruct
   , Music
+  , MusicType(..)
   , mkFinalizedMusic
   ) where
 
@@ -39,4 +40,8 @@ instance Storable Chunk where
     <*> #{peek Mix_Chunk, abuf} ptr
     <*> #{peek Mix_Chunk, alen} ptr
     <*> #{peek Mix_Chunk, volume} ptr
+
+data MusicType
+   = NONE | CMD | WAV | MOD | MID | OGG | MP3 | MP3_MAD | FLAC | MODPLUG
+   deriving (Show, Eq)
 
