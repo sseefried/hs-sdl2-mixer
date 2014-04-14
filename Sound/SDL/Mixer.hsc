@@ -28,6 +28,10 @@ module Sound.SDL.Mixer
   , loadMUSTypeRW
   , quickLoadWav
   , quickLoadRAW
+  , getNumChunkDecoders
+  , getChunkDecoder
+  , getNumMusicDecoders
+  , getMusicDecoder
   ) where
 
 import Foreign
@@ -178,4 +182,30 @@ quickLoadRAW :: B.ByteString -> IO Chunk
 quickLoadRAW bs =
   let (bs'', _, len) = BI.toForeignPtr bs
   in withForeignPtr bs'' $ \bs' -> mixQuickLoadRAW' bs' (fromIntegral len) >>= peek
+
+foreign import ccall unsafe "Mix_GetNumChunkDecoders"
+  mixGetNumChunkDecoders' :: IO #{type int}
+
+getNumChunkDecoders :: IO Int
+getNumChunkDecoders = mixGetNumChunkDecoders' >>= return . fromIntegral
+
+foreign import ccall unsafe "Mix_GetChunkDecoder"
+  mixGetChunkDecoder' :: #{type int} -> IO CString
+
+getChunkDecoder :: Int -> IO String
+getChunkDecoder index =
+  mixGetChunkDecoder' (fromIntegral index) >>= peekCString
+
+foreign import ccall unsafe "Mix_GetNumMusicDecoders"
+  mixGetNumMusicDecoders' :: IO #{type int}
+
+getNumMusicDecoders :: IO Int
+getNumMusicDecoders = mixGetNumMusicDecoders' >>= return . fromIntegral
+
+foreign import ccall unsafe "Mix_GetMusicDecoder"
+  mixGetMusicDecoder' :: #{type int} -> IO CString
+
+getMusicDecoder :: Int -> IO String
+getMusicDecoder index =
+  mixGetMusicDecoder' (fromIntegral index) >>= peekCString
 
