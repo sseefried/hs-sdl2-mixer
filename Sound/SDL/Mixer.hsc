@@ -27,11 +27,14 @@ module Sound.SDL.Mixer
   , loadMUSRW
   , loadMUSTypeRW
   , quickLoadWav
+  , quickLoadRAW
   ) where
 
 import Foreign
 import Foreign.C.String
 import Prelude hiding (init)
+import qualified Data.ByteString as B
+import qualified Data.ByteString.Internal as BI
 import Graphics.UI.SDL.Types
 import Graphics.UI.SDL.Audio (AudioFormat(..), fromAudioFormat, toAudioFormat)
 import Graphics.UI.SDL.Error (getError)
@@ -161,9 +164,18 @@ loadMUSTypeRW rwops mt dofree =
     mixLoadMUSTypeRW' rwops' (unwrapMusicType mt) (fromBool dofree) >>= mkFinalizedMusic
 
 foreign import ccall unsafe "Mix_QuickLoad_WAV"
-  mixQuickLoadWAV' :: Ptr #{type Uint8} -> IO (Ptr MusicStruct)
+  mixQuickLoadWAV' :: Ptr #{type Uint8} -> IO (Ptr Chunk)
 
-quickLoadWav :: Ptr #{type Uint8} -> IO Music
-quickLoadWav mem =
-  mixQuickLoadWAV' mem >>= mkFinalizedMusic
+quickLoadWav :: B.ByteString -> IO Chunk
+quickLoadWav bs =
+  let (bs'', _, _) = BI.toForeignPtr bs
+  in withForeignPtr bs'' $ \bs' -> mixQuickLoadWAV' bs' >>= peek
+
+foreign import ccall unsafe "Mix_QuickLoad_RAW"
+  mixQuickLoadRAW' :: Ptr #{type Uint8} -> #{type Uint32} -> IO (Ptr Chunk)
+
+quickLoadRAW :: B.ByteString -> IO Chunk
+quickLoadRAW bs =
+  let (bs'', _, len) = BI.toForeignPtr bs
+  in withForeignPtr bs'' $ \bs' -> mixQuickLoadRAW' bs' (fromIntegral len) >>= peek
 

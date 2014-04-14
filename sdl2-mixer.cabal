@@ -26,6 +26,7 @@ library
     SDL2_mixer >= 2.0.0
   build-depends:
     base >=4,
+    bytestring,
     SDL2
   ghc-options: -Wall
   exposed-modules:     
