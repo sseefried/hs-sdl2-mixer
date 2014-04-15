@@ -51,6 +51,23 @@ module Sound.SDL.Mixer
   , fadeOutMusic
   , fadingMusic
   , fadingChannel
+  , pause
+  , resume
+  , paused
+  , pauseMusic
+  , resumeMusic
+  , rewindMusic
+  , pausedMusic
+  , setMusicPosition
+  , playing
+  , playingMusic
+  , setMusicCMD
+  , setSynchroValue
+  , getSynchroValue
+  , setSoundFonts
+  , getSoundFonts
+  , getChunk
+  , closeAudio
   ) where
 
 import Foreign
@@ -494,4 +511,106 @@ foreign import ccall unsafe "Mix_FadingChannel"
 fadingChannel :: Channel -> IO Fading
 fadingChannel channel =
   mixFadingChannel' (fromIntegral channel) >>= return . constantToFading
+
+foreign import ccall unsafe "Mix_Pause"
+  mixPause' :: #{type int} -> IO ()
+
+pause :: Channel -> IO ()
+pause = mixPause' . fromIntegral
+
+foreign import ccall unsafe "Mix_Resume"
+  mixResume' :: #{type int} -> IO ()
+
+resume :: Channel -> IO ()
+resume = mixResume' . fromIntegral
+
+foreign import ccall unsafe "Mix_Paused"
+  mixPaused' :: #{type int} -> IO #{type int}
+
+paused :: Channel -> IO Bool
+paused channel = mixPaused' (fromIntegral channel) >>= return . toBool
+
+foreign import ccall unsafe "Mix_PauseMusic"
+  pauseMusic :: IO ()
+
+foreign import ccall unsafe "Mix_ResumeMusic"
+  resumeMusic :: IO ()
+
+foreign import ccall unsafe "Mix_RewindMusic"
+  rewindMusic :: IO ()
+
+foreign import ccall unsafe "Mix_PausedMusic"
+  mixPausedMusic' :: IO #{type int}
+
+pausedMusic :: IO Bool
+pausedMusic = mixPausedMusic' >>= return . toBool
+
+foreign import ccall unsafe "Mix_SetMusicPosition"
+  mixSetMusicPosition' :: #{type double} -> IO #{type int}
+
+setMusicPosition :: Double -> IO ()
+setMusicPosition pos = do
+  ret <- mixSetMusicPosition' pos
+  handleErrorI "setMusicPosition" ret (const $ return ())
+
+foreign import ccall unsafe "Mix_Playing"
+  mixPlaying' :: #{type int} -> IO #{type int} 
+
+playing :: Channel -> IO Bool
+playing channel = mixPlaying' (fromIntegral channel) >>= return . toBool
+
+foreign import ccall unsafe "Mix_PlayingMusic"
+  mixPlayingMusic' :: IO #{type int} 
+
+playingMusic :: IO Bool
+playingMusic = mixPlayingMusic' >>= return . toBool
+
+foreign import ccall unsafe "Mix_SetMusicCMD"
+  mixSetMusicCMD' :: CString -> IO #{type int}
+
+setMusicCMD :: String -> IO ()
+setMusicCMD cmd =
+  withCString cmd $ \cmd' -> do
+    ret <- mixSetMusicCMD' cmd'
+    handleErrorI "setMusicCMD" ret (const $ return ())
+
+foreign import ccall unsafe "Mix_SetSynchroValue"
+  mixSetSynchroValue' :: #{type int} -> IO #{type int}
+
+setSynchroValue :: Int -> IO ()
+setSynchroValue value = do
+  ret <- mixSetSynchroValue' (fromIntegral value)
+  handleErrorI "setSynchroValue" ret (const $ return ())
+
+foreign import ccall unsafe "Mix_GetSynchroValue"
+  mixGetSynchroValue' :: IO #{type int}
+
+getSynchroValue :: IO Int
+getSynchroValue = mixGetSynchroValue' >>= return . fromIntegral
+
+foreign import ccall unsafe "Mix_SetSoundFonts"
+  mixSetSoundFonts' :: CString -> IO Int
+
+setSoundFonts :: String -> IO ()
+setSoundFonts paths =
+  withCString paths $ \paths' -> do
+    ret <- mixSetSoundFonts' paths'
+    handleErrorI "setSoundFonts" ret (const $ return ())
+
+foreign import ccall unsafe "Mix_GetSoundFonts"
+  mixGetSoundFonts' :: IO CString
+
+getSoundFonts :: IO String
+getSoundFonts = mixGetSoundFonts' >>= peekCString
+
+-- TODO Mix_EachSoundFont
+
+foreign import ccall unsafe "Mix_GetChunk"
+  mixGetChunk' :: #{type int} -> IO (Ptr Chunk)
+
+getChunk :: Channel -> IO Chunk
+getChunk channel = mixGetChunk' (fromIntegral channel) >>= peek
+
+foreign import ccall unsafe "Mix_CloseAudio"
+  closeAudio :: IO ()
 
