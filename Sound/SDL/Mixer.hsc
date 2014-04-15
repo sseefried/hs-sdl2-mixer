@@ -49,6 +49,8 @@ module Sound.SDL.Mixer
   , fadeOutChannel
   , fadeOutGroup
   , fadeOutMusic
+  , fadingMusic
+  , fadingChannel
   ) where
 
 import Foreign
@@ -473,4 +475,23 @@ foreign import ccall unsafe "Mix_FadeOutMusic"
 fadeOutMusic :: Int -> IO Bool
 fadeOutMusic ms =
   mixFadeOutMusic' (fromIntegral ms) >>= return . toBool
+
+foreign import ccall unsafe "Mix_FadingMusic"
+  mixFadingMusic' :: IO #{type Mix_Fading}
+
+constantToFading :: #{type Mix_Fading} -> Fading
+constantToFading #{const MIX_NO_FADING} = NoFading
+constantToFading #{const MIX_FADING_OUT} = FadingOut
+constantToFading #{const MIX_FADING_IN} = FadingIn
+constantToFading _ = error "invalid fading value"
+
+fadingMusic :: IO Fading
+fadingMusic = mixFadingMusic' >>= return . constantToFading
+
+foreign import ccall unsafe "Mix_FadingChannel"
+  mixFadingChannel' :: #{type int} -> IO #{type Mix_Fading}
+
+fadingChannel :: Channel -> IO Fading
+fadingChannel channel =
+  mixFadingChannel' (fromIntegral channel) >>= return . constantToFading
 

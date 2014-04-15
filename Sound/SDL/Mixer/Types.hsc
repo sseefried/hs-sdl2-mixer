@@ -9,6 +9,7 @@ module Sound.SDL.Mixer.Types
   , Volume
   , makeVolume
   , unwrapVolume
+  , Fading(..)
   ) where
 
 import Foreign
@@ -63,4 +64,8 @@ makeVolume i
   | i < -1        = error "volume is too low"
   | i > maxVolume = error "volume is too high"
   | otherwise     = Volume i
+
+data Fading
+   = NoFading | FadingOut | FadingIn
+   deriving (Show, Eq)
 
