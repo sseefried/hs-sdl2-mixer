@@ -45,6 +45,10 @@ module Sound.SDL.Mixer
   , haltChannel
   , haltGroup
   , haltMusic
+  , expireChannel
+  , fadeOutChannel
+  , fadeOutGroup
+  , fadeOutMusic
   ) where
 
 import Foreign
@@ -438,4 +442,35 @@ foreign import ccall unsafe "Mix_HaltMusic"
 
 haltMusic :: IO ()
 haltMusic = mixHaltMusic' >> return ()
+
+foreign import ccall unsafe "Mix_ExpireChannel"
+  mixExpireChannel' :: #{type int} -> #{type int} -> IO #{type int}
+
+-- | returns number of channels set to expire
+expireChannel :: Channel -> Int -> IO Int
+expireChannel channel ticks =
+  mixExpireChannel' (fromIntegral channel) (fromIntegral ticks) >>= return . fromIntegral
+
+foreign import ccall unsafe "Mix_FadeOutChannel"
+  mixFadeOutChannel' :: #{type int} -> #{type int} -> IO #{type int}
+
+-- | returns the number of channels set to fade out
+fadeOutChannel :: Channel -> Int -> IO Int
+fadeOutChannel channel ms =
+  mixFadeOutChannel' (fromIntegral channel) (fromIntegral ms) >>= return . fromIntegral
+
+foreign import ccall unsafe "Mix_FadeOutGroup"
+  mixFadeOutGroup' :: #{type int} -> #{type int} -> IO #{type int}
+
+-- | returns the number of channels set to fade out
+fadeOutGroup :: Int -> Int -> IO Int
+fadeOutGroup tag ms =
+  mixFadeOutGroup' (fromIntegral tag) (fromIntegral ms) >>= return . fromIntegral
+
+foreign import ccall unsafe "Mix_FadeOutMusic"
+  mixFadeOutMusic' :: #{type int} -> IO #{type int}
+
+fadeOutMusic :: Int -> IO Bool
+fadeOutMusic ms =
+  mixFadeOutMusic' (fromIntegral ms) >>= return . toBool
 
