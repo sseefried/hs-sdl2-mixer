@@ -28,6 +28,12 @@ module Sound.SDL.Mixer
   , setDistance
   , setReverseStereo
   , reserveChannels
+  , groupChannel
+  , groupChannels
+  , groupAvailable
+  , groupCount
+  , groupOldest
+  , groupNewer
   ) where
 
 import Foreign
@@ -281,4 +287,46 @@ reserveChannels :: Int -> IO ()
 reserveChannels num = do
   ret <- mixReserveChannels' (fromIntegral num)
   handleErrorI "reserveChannels" ret $ (const $ return ())
+
+foreign import ccall unsafe "Mix_GroupChannel"
+  mixGroupChannel' :: #{type int} -> #{type int} -> IO #{type int}
+
+groupChannel :: Int -> Int -> IO Bool
+groupChannel which tag =
+  mixGroupChannel' (fromIntegral which) (fromIntegral tag) >>= return . toBool
+
+foreign import ccall unsafe "Mix_GroupChannels"
+  mixGroupChannels' :: #{type int} -> #{type int} -> #{type int} -> IO #{type int}
+
+groupChannels :: Int -> Int -> Int -> IO Bool
+groupChannels from to tag =
+  let from' = fromIntegral from
+      to'   = fromIntegral to
+      tag'  = fromIntegral tag
+  in mixGroupChannels' from' to' tag' >>= return . toBool
+
+foreign import ccall unsafe "Mix_GroupAvailable"
+  mixGroupAvailable' :: #{type int} -> IO #{type int}
+
+groupAvailable :: Int -> IO Int
+groupAvailable tag = mixGroupAvailable' (fromIntegral tag) >>= return . fromIntegral
+
+foreign import ccall unsafe "Mix_GroupCount"
+  mixGroupCount' :: #{type int} -> IO #{type int}
+
+groupCount :: Int -> IO Int
+groupCount tag = mixGroupCount' (fromIntegral tag) >>= return . fromIntegral
+
+foreign import ccall unsafe "Mix_GroupOldest"
+  mixGroupOldest' :: #{type int} -> IO #{type int}
+
+groupOldest :: Int -> IO Int
+groupOldest tag =
+  mixGroupOldest' (fromIntegral tag) >>= return . fromIntegral
+
+foreign import ccall unsafe "Mix_GroupNewer"
+  mixGroupNewer' :: #{type int} -> IO #{type int}
+
+groupNewer :: Int -> IO Int
+groupNewer tag = mixGroupNewer' (fromIntegral tag) >>= return . fromIntegral
 
