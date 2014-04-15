@@ -34,6 +34,11 @@ module Sound.SDL.Mixer
   , groupCount
   , groupOldest
   , groupNewer
+  , playChannelTimes
+  , playMusic
+  , fadeInMusic
+  , fadeInMusicPos
+  , fadeInChannelTimed
   ) where
 
 import Foreign
@@ -329,4 +334,55 @@ foreign import ccall unsafe "Mix_GroupNewer"
 
 groupNewer :: Int -> IO Int
 groupNewer tag = mixGroupNewer' (fromIntegral tag) >>= return . fromIntegral
+
+foreign import ccall unsafe "Mix_PlayChannelTimed"
+  mixPlayChannelTimes' :: #{type int} -> Ptr Chunk -> #{type int} -> #{type int} -> IO #{type int}
+
+playChannelTimes :: Int -> Chunk -> Int -> Int -> IO Int
+playChannelTimes channel chunk loops ticks =
+  let channel' = fromIntegral channel
+      loops'   = fromIntegral loops
+      ticks'   = fromIntegral ticks
+  in with chunk $ \chunk' ->
+       mixPlayChannelTimes' channel' chunk' loops' ticks' >>= return . fromIntegral
+
+foreign import ccall unsafe "Mix_PlayMusic"
+  mixPlayMusic' :: Ptr MusicStruct -> #{type int} -> IO #{type int}
+
+playMusic :: Music -> Int -> IO ()
+playMusic music loops =
+  withForeignPtr music $ \music' -> do
+    ret <- mixPlayMusic' music' (fromIntegral loops)
+    handleErrorI "playMusic" ret (const $ return ())
+
+foreign import ccall unsafe "Mix_FadeInMusic"
+  mixFadeInMusic' :: Ptr MusicStruct -> #{type int} -> #{type int} -> IO #{type int}
+
+fadeInMusic :: Music -> Int -> Int -> IO ()
+fadeInMusic music loops ms =
+  withForeignPtr music $ \music' -> do
+    ret <- mixFadeInMusic' music' (fromIntegral loops) (fromIntegral ms)
+    handleErrorI "fadeInMusic" ret (const $ return ())
+
+foreign import ccall unsafe "Mix_FadeInMusicPos"
+  mixFadeInMusicPos' :: Ptr MusicStruct -> #{type int} -> #{type int} -> #{type double} -> IO #{type int}
+
+fadeInMusicPos :: Music -> Int -> Int -> Double -> IO ()
+fadeInMusicPos music loops ms pos =
+  withForeignPtr music $ \music' -> do
+    ret <- mixFadeInMusicPos' music' (fromIntegral loops) (fromIntegral ms) pos
+    handleErrorI "fadeInMusicPos" ret (const $ return ())
+
+foreign import ccall unsafe "Mix_FadeInChannelTimed"
+  mixFadeInChannelTimed' :: #{type int} -> Ptr Chunk -> #{type int} -> #{type int} -> #{type int} -> IO #{type int}
+
+fadeInChannelTimed :: Int -> Chunk -> Int -> Int -> Int -> IO ()
+fadeInChannelTimed channel chunk loops ms ticks =
+  with chunk $ \chunk' -> do
+    let channel' = fromIntegral channel
+        loops'   = fromIntegral loops
+        ms'      = fromIntegral ms
+        ticks'   = fromIntegral ticks
+    ret <- mixFadeInChannelTimed' channel' chunk' loops' ms' ticks'
+    handleErrorI "fadeInChannelTimed" ret (const $ return ())
 
