@@ -42,6 +42,9 @@ module Sound.SDL.Mixer
   , volume
   , volumeChunk
   , volumeMusic
+  , haltChannel
+  , haltGroup
+  , haltMusic
   ) where
 
 import Foreign
@@ -417,4 +420,22 @@ volToCInt = fromIntegral . unwrapVolume
 
 cIntToVol :: #{type int} -> Volume
 cIntToVol = makeVolume . fromIntegral
+
+foreign import ccall unsafe "Mix_HaltChannel"
+  mixHaltChannel' :: #{type int} -> IO #{type int}
+
+haltChannel :: Channel -> IO ()
+haltChannel channel = mixHaltChannel' (fromIntegral channel) >> return ()
+
+foreign import ccall unsafe "Mix_HaltGroup"
+  mixHaltGroup' :: #{type int} -> IO #{type int}
+
+haltGroup :: Int -> IO ()
+haltGroup tag = mixHaltGroup' (fromIntegral tag) >> return ()
+
+foreign import ccall unsafe "Mix_HaltMusic"
+  mixHaltMusic' :: IO #{type int}
+
+haltMusic :: IO ()
+haltMusic = mixHaltMusic' >> return ()
 
