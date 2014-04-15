@@ -39,6 +39,9 @@ module Sound.SDL.Mixer
   , fadeInMusic
   , fadeInMusicPos
   , fadeInChannelTimed
+  , volume
+  , volumeChunk
+  , volumeMusic
   ) where
 
 import Foreign
@@ -247,7 +250,7 @@ Mix_UnregisterAllEffects
 foreign import ccall unsafe "Mix_SetPanning"
   mixSetPanning' :: #{type int} -> #{type Uint8} -> #{type Uint8} -> IO #{type int}
 
-setPanning :: Int -> Int -> Int -> IO ()
+setPanning :: Channel -> Int -> Int -> IO ()
 setPanning channel left right = do
   let channel' = fromIntegral channel
       left'    = fromIntegral left
@@ -258,7 +261,7 @@ setPanning channel left right = do
 foreign import ccall unsafe "Mix_SetPosition"
   mixSetPosition' :: #{type int} -> #{type Sint16} -> #{type Uint8} -> IO #{type int}
 
-setPosition :: Int -> Int -> Int -> IO ()
+setPosition :: Channel -> Int -> Int -> IO ()
 setPosition channel angle distance = do
   let channel'  = fromIntegral channel
       angle'    = fromIntegral angle
@@ -269,7 +272,7 @@ setPosition channel angle distance = do
 foreign import ccall unsafe "Mix_SetDistance"
   mixSetDistance' :: #{type int} -> #{type Uint8} -> IO #{type int}
 
-setDistance :: Int -> Int -> IO ()
+setDistance :: Channel -> Int -> IO ()
 setDistance channel distance = do
   let channel'  = fromIntegral channel
       distance' = fromIntegral distance
@@ -279,7 +282,7 @@ setDistance channel distance = do
 foreign import ccall unsafe "Mix_SetReverseStereo"
   mixSetReverseStereo' :: #{type int} -> #{type int} -> IO #{type int}
 
-setReverseStereo :: Int -> Bool -> IO ()
+setReverseStereo :: Channel -> Bool -> IO ()
 setReverseStereo channel doflip = do
   let channel' = fromIntegral channel
   ret <- mixSetReverseStereo' channel' (fromBool doflip)
@@ -296,7 +299,7 @@ reserveChannels num = do
 foreign import ccall unsafe "Mix_GroupChannel"
   mixGroupChannel' :: #{type int} -> #{type int} -> IO #{type int}
 
-groupChannel :: Int -> Int -> IO Bool
+groupChannel :: Channel -> Int -> IO Bool
 groupChannel which tag =
   mixGroupChannel' (fromIntegral which) (fromIntegral tag) >>= return . toBool
 
@@ -338,7 +341,7 @@ groupNewer tag = mixGroupNewer' (fromIntegral tag) >>= return . fromIntegral
 foreign import ccall unsafe "Mix_PlayChannelTimed"
   mixPlayChannelTimes' :: #{type int} -> Ptr Chunk -> #{type int} -> #{type int} -> IO #{type int}
 
-playChannelTimes :: Int -> Chunk -> Int -> Int -> IO Int
+playChannelTimes :: Channel -> Chunk -> Int -> Int -> IO Int
 playChannelTimes channel chunk loops ticks =
   let channel' = fromIntegral channel
       loops'   = fromIntegral loops
@@ -376,7 +379,7 @@ fadeInMusicPos music loops ms pos =
 foreign import ccall unsafe "Mix_FadeInChannelTimed"
   mixFadeInChannelTimed' :: #{type int} -> Ptr Chunk -> #{type int} -> #{type int} -> #{type int} -> IO #{type int}
 
-fadeInChannelTimed :: Int -> Chunk -> Int -> Int -> Int -> IO ()
+fadeInChannelTimed :: Channel -> Chunk -> Int -> Int -> Int -> IO ()
 fadeInChannelTimed channel chunk loops ms ticks =
   with chunk $ \chunk' -> do
     let channel' = fromIntegral channel
@@ -385,4 +388,33 @@ fadeInChannelTimed channel chunk loops ms ticks =
         ticks'   = fromIntegral ticks
     ret <- mixFadeInChannelTimed' channel' chunk' loops' ms' ticks'
     handleErrorI "fadeInChannelTimed" ret (const $ return ())
+
+foreign import ccall unsafe "Mix_Volume"
+  mixVolume' :: #{type int} -> #{type int} -> IO #{type int}
+
+volume :: Channel -> Volume -> IO Volume
+volume channel vol =
+  mixVolume' (fromIntegral channel) (volToCInt vol) >>= return . cIntToVol
+
+foreign import ccall unsafe "Mix_VolumeChunk"
+  mixVolumeChunk' :: Ptr Chunk -> #{type int} -> IO #{type int}
+
+volumeChunk :: Chunk -> Volume -> IO Volume
+volumeChunk chunk vol =
+  with chunk $ \chunk' ->
+    mixVolumeChunk' chunk' (volToCInt vol) >>= return . cIntToVol
+
+foreign import ccall unsafe "Mix_VolumeMusic"
+  mixVolumeMusic' :: Ptr MusicStruct -> #{type int} -> IO #{type int}
+
+volumeMusic :: Music -> Volume -> IO Volume
+volumeMusic music vol =
+  withForeignPtr music $ \music' ->
+    mixVolumeMusic' music' (volToCInt vol) >>= return . cIntToVol
+
+volToCInt :: Volume -> #{type int}
+volToCInt = fromIntegral . unwrapVolume
+
+cIntToVol :: #{type int} -> Volume
+cIntToVol = makeVolume . fromIntegral
 

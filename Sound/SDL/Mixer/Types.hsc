@@ -5,6 +5,10 @@ module Sound.SDL.Mixer.Types
   , Music
   , MusicType(..)
   , mkFinalizedMusic
+  , Channel
+  , Volume
+  , makeVolume
+  , unwrapVolume
   ) where
 
 import Foreign
@@ -44,4 +48,19 @@ instance Storable Chunk where
 data MusicType
    = NONE | CMD | WAV | MOD | MID | OGG | MP3 | MP3_MAD | FLAC | MODPLUG
    deriving (Show, Eq)
+
+type Channel = Int
+
+newtype Volume
+      = Volume { unwrapVolume :: Int }
+      deriving (Eq, Show)
+
+maxVolume :: Int
+maxVolume = #{const MIX_MAX_VOLUME}
+
+makeVolume :: Int -> Volume
+makeVolume i
+  | i < -1        = error "volume is too low"
+  | i > maxVolume = error "volume is too high"
+  | otherwise     = Volume i
 
