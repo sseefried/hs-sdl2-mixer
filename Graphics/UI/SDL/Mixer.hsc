@@ -1,5 +1,5 @@
 #include "SDL_mixer.h"
-module Sound.SDL.Mixer
+module Graphics.UI.SDL.Mixer
   ( version
   , initFLAC
   , initMOD

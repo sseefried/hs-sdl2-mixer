@@ -1,5 +1,5 @@
 #include "SDL_mixer.h"
-module Sound.SDL.Mixer.Types
+module Graphics.UI.SDL.Mixer.Types
   ( Chunk(..)
   , MusicStruct
   , Music
