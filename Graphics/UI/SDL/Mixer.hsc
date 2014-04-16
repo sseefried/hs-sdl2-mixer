@@ -34,7 +34,7 @@ module Graphics.UI.SDL.Mixer
   , groupCount
   , groupOldest
   , groupNewer
-  , playChannelTimes
+  , playChannelTimed
   , playMusic
   , fadeInMusic
   , fadeInMusicPos
@@ -365,15 +365,15 @@ groupNewer :: Int -> IO Int
 groupNewer tag = mixGroupNewer' (fromIntegral tag) >>= return . fromIntegral
 
 foreign import ccall unsafe "Mix_PlayChannelTimed"
-  mixPlayChannelTimes' :: #{type int} -> Ptr Chunk -> #{type int} -> #{type int} -> IO #{type int}
+  mixPlayChannelTimed' :: #{type int} -> Ptr Chunk -> #{type int} -> #{type int} -> IO #{type int}
 
-playChannelTimes :: Channel -> Chunk -> Int -> Int -> IO Int
-playChannelTimes channel chunk loops ticks =
+playChannelTimed :: Channel -> Chunk -> Int -> Int -> IO Int
+playChannelTimed channel chunk loops ticks =
   let channel' = fromIntegral channel
       loops'   = fromIntegral loops
       ticks'   = fromIntegral ticks
   in with chunk $ \chunk' ->
-       mixPlayChannelTimes' channel' chunk' loops' ticks' >>= return . fromIntegral
+       mixPlayChannelTimed' channel' chunk' loops' ticks' >>= return . fromIntegral
 
 foreign import ccall unsafe "Mix_PlayMusic"
   mixPlayMusic' :: Ptr MusicStruct -> #{type int} -> IO #{type int}
