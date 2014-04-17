@@ -78,7 +78,7 @@ import qualified Data.ByteString.Internal as BI
 import Graphics.UI.SDL.Types
 import Graphics.UI.SDL.Audio (AudioFormat(..), fromAudioFormat, toAudioFormat)
 import Graphics.UI.SDL.Error (getError)
-import Sound.SDL.Mixer.Types
+import Graphics.UI.SDL.Mixer.Types
 
 -- Error handling until something better is decided on in the main lib.
 handleErrorI :: (Num a, Ord a) => String -> a -> (a -> IO b) -> IO b
@@ -156,12 +156,12 @@ querySpec =
       return (freq, format, channels)
 
 foreign import ccall unsafe "Mix_LoadWAV_RW"
-  mixLoadWAVRW' :: Ptr RWopsStruct -> #{type int} -> IO (Ptr Chunk)
+  mixLoadWAVRW' :: Ptr RWopsStruct -> #{type int} -> IO (Ptr ChunkStruct)
 
 loadWAVRW :: RWops -> Bool -> IO Chunk
 loadWAVRW rwops dofree =
   withForeignPtr rwops $ \rwops' ->
-    mixLoadWAVRW' rwops' (fromBool dofree) >>= peek
+    mixLoadWAVRW' rwops' (fromBool dofree) >>= mkFinalizedChunk
 
 foreign import ccall unsafe "Mix_LoadMUS"
   mixLoadMUS' :: CString -> IO (Ptr MusicStruct)
@@ -188,20 +188,20 @@ loadMUSTypeRW rwops mt dofree =
     mixLoadMUSTypeRW' rwops' (musicTypeToConstant mt) (fromBool dofree) >>= mkFinalizedMusic
 
 foreign import ccall unsafe "Mix_QuickLoad_WAV"
-  mixQuickLoadWAV' :: Ptr #{type Uint8} -> IO (Ptr Chunk)
+  mixQuickLoadWAV' :: Ptr #{type Uint8} -> IO (Ptr ChunkStruct)
 
 quickLoadWav :: B.ByteString -> IO Chunk
 quickLoadWav bs =
   let (bs'', _, _) = BI.toForeignPtr bs
-  in withForeignPtr bs'' $ \bs' -> mixQuickLoadWAV' bs' >>= peek
+  in withForeignPtr bs'' $ \bs' -> mixQuickLoadWAV' bs' >>= mkFinalizedChunk
 
 foreign import ccall unsafe "Mix_QuickLoad_RAW"
-  mixQuickLoadRAW' :: Ptr #{type Uint8} -> #{type Uint32} -> IO (Ptr Chunk)
+  mixQuickLoadRAW' :: Ptr #{type Uint8} -> #{type Uint32} -> IO (Ptr ChunkStruct)
 
 quickLoadRAW :: B.ByteString -> IO Chunk
 quickLoadRAW bs =
   let (bs'', _, len) = BI.toForeignPtr bs
-  in withForeignPtr bs'' $ \bs' -> mixQuickLoadRAW' bs' (fromIntegral len) >>= peek
+  in withForeignPtr bs'' $ \bs' -> mixQuickLoadRAW' bs' (fromIntegral len) >>= mkFinalizedChunk
 
 foreign import ccall unsafe "Mix_GetNumChunkDecoders"
   mixGetNumChunkDecoders' :: IO #{type int}
@@ -365,14 +365,14 @@ groupNewer :: Int -> IO Int
 groupNewer tag = mixGroupNewer' (fromIntegral tag) >>= return . fromIntegral
 
 foreign import ccall unsafe "Mix_PlayChannelTimed"
-  mixPlayChannelTimed' :: #{type int} -> Ptr Chunk -> #{type int} -> #{type int} -> IO #{type int}
+  mixPlayChannelTimed' :: #{type int} -> Ptr ChunkStruct -> #{type int} -> #{type int} -> IO #{type int}
 
 playChannelTimed :: Channel -> Chunk -> Int -> Int -> IO Int
 playChannelTimed channel chunk loops ticks =
   let channel' = fromIntegral channel
       loops'   = fromIntegral loops
       ticks'   = fromIntegral ticks
-  in with chunk $ \chunk' ->
+  in withForeignPtr chunk $ \chunk' ->
        mixPlayChannelTimed' channel' chunk' loops' ticks' >>= return . fromIntegral
 
 foreign import ccall unsafe "Mix_PlayMusic"
@@ -403,11 +403,11 @@ fadeInMusicPos music loops ms pos =
     handleErrorI "fadeInMusicPos" ret (const $ return ())
 
 foreign import ccall unsafe "Mix_FadeInChannelTimed"
-  mixFadeInChannelTimed' :: #{type int} -> Ptr Chunk -> #{type int} -> #{type int} -> #{type int} -> IO #{type int}
+  mixFadeInChannelTimed' :: #{type int} -> Ptr ChunkStruct -> #{type int} -> #{type int} -> #{type int} -> IO #{type int}
 
 fadeInChannelTimed :: Channel -> Chunk -> Int -> Int -> Int -> IO ()
 fadeInChannelTimed channel chunk loops ms ticks =
-  with chunk $ \chunk' -> do
+  withForeignPtr chunk $ \chunk' -> do
     let channel' = fromIntegral channel
         loops'   = fromIntegral loops
         ms'      = fromIntegral ms
@@ -423,11 +423,11 @@ volume channel vol =
   mixVolume' (fromIntegral channel) (volToCInt vol) >>= return . cIntToVol
 
 foreign import ccall unsafe "Mix_VolumeChunk"
-  mixVolumeChunk' :: Ptr Chunk -> #{type int} -> IO #{type int}
+  mixVolumeChunk' :: Ptr ChunkStruct -> #{type int} -> IO #{type int}
 
 volumeChunk :: Chunk -> Volume -> IO Volume
 volumeChunk chunk vol =
-  with chunk $ \chunk' ->
+  withForeignPtr chunk $ \chunk' ->
     mixVolumeChunk' chunk' (volToCInt vol) >>= return . cIntToVol
 
 foreign import ccall unsafe "Mix_VolumeMusic"
@@ -606,10 +606,10 @@ getSoundFonts = mixGetSoundFonts' >>= peekCString
 -- TODO Mix_EachSoundFont
 
 foreign import ccall unsafe "Mix_GetChunk"
-  mixGetChunk' :: #{type int} -> IO (Ptr Chunk)
+  mixGetChunk' :: #{type int} -> IO (Ptr ChunkStruct)
 
 getChunk :: Channel -> IO Chunk
-getChunk channel = mixGetChunk' (fromIntegral channel) >>= peek
+getChunk channel = mixGetChunk' (fromIntegral channel) >>= mkFinalizedChunk
 
 foreign import ccall unsafe "Mix_CloseAudio"
   closeAudio :: IO ()

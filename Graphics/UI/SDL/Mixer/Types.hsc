@@ -1,15 +1,17 @@
 #include "SDL_mixer.h"
 module Graphics.UI.SDL.Mixer.Types
-  ( Chunk(..)
+  ( ChunkStruct(..)
+  , Chunk
   , MusicStruct
   , Music
   , MusicType(..)
-  , mkFinalizedMusic
   , Channel
   , Volume
+  , Fading(..)
+  , mkFinalizedChunk
+  , mkFinalizedMusic
   , makeVolume
   , unwrapVolume
-  , Fading(..)
   ) where
 
 import Foreign
@@ -24,27 +26,35 @@ foreign import ccall unsafe "&Mix_FreeMusic"
 mkFinalizedMusic :: Ptr MusicStruct -> IO Music
 mkFinalizedMusic = newForeignPtr mixFreeMusic'
 
-data Chunk
-   = Chunk { chunkAllocated :: #{type int}
-           , chunkABuf :: Ptr #{type Uint8}
-           , chunkAlen :: #{type Uint32}
-           , chunkVolume :: #{type Uint8}
-           }
+data ChunkStruct
+   = ChunkStruct { chunkAllocated :: #{type int}
+                 , chunkABuf :: Ptr #{type Uint8}
+                 , chunkAlen :: #{type Uint32}
+                 , chunkVolume :: #{type Uint8}
+                 }
     deriving (Eq, Show)
 
-instance Storable Chunk where
+instance Storable ChunkStruct where
   sizeOf = const #{size Mix_Chunk}
   alignment = const 4
-  poke ptr Chunk{..} = do
+  poke ptr ChunkStruct{..} = do
     #{poke Mix_Chunk, allocated} ptr chunkAllocated
     #{poke Mix_Chunk, abuf} ptr chunkABuf
     #{poke Mix_Chunk, alen} ptr chunkAlen
     #{poke Mix_Chunk, volume} ptr chunkVolume
-  peek ptr = Chunk
+  peek ptr = ChunkStruct
     <$> #{peek Mix_Chunk, allocated} ptr
     <*> #{peek Mix_Chunk, abuf} ptr
     <*> #{peek Mix_Chunk, alen} ptr
     <*> #{peek Mix_Chunk, volume} ptr
+
+type Chunk = ForeignPtr ChunkStruct
+
+foreign import ccall unsafe "&Mix_FreeChunk"
+  mixFreeChunk' :: FunPtr (Ptr ChunkStruct -> IO ())
+
+mkFinalizedChunk :: Ptr ChunkStruct -> IO Chunk
+mkFinalizedChunk = newForeignPtr mixFreeChunk'
 
 data MusicType
    = NONE | CMD | WAV | MOD | MID | OGG | MP3 | MP3_MAD | FLAC | MODPLUG
