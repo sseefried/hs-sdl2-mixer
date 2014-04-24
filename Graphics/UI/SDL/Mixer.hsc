@@ -72,6 +72,7 @@ module Graphics.UI.SDL.Mixer
 
 import Foreign
 import Foreign.C.String
+import Control.Applicative
 import Prelude hiding (init)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Internal as BI
@@ -207,7 +208,7 @@ foreign import ccall unsafe "Mix_GetNumChunkDecoders"
   mixGetNumChunkDecoders' :: IO #{type int}
 
 getNumChunkDecoders :: IO Int
-getNumChunkDecoders = mixGetNumChunkDecoders' >>= return . fromIntegral
+getNumChunkDecoders = fromIntegral <$> mixGetNumChunkDecoders'
 
 foreign import ccall unsafe "Mix_GetChunkDecoder"
   mixGetChunkDecoder' :: #{type int} -> IO CString
@@ -220,7 +221,7 @@ foreign import ccall unsafe "Mix_GetNumMusicDecoders"
   mixGetNumMusicDecoders' :: IO #{type int}
 
 getNumMusicDecoders :: IO Int
-getNumMusicDecoders = mixGetNumMusicDecoders' >>= return . fromIntegral
+getNumMusicDecoders = fromIntegral <$> mixGetNumMusicDecoders'
 
 foreign import ccall unsafe "Mix_GetMusicDecoder"
   mixGetMusicDecoder' :: #{type int} -> IO CString
@@ -235,7 +236,7 @@ foreign import ccall unsafe "Mix_GetMusicType"
 getMusicType :: Music -> IO MusicType
 getMusicType music =
   withForeignPtr music $ \music' ->
-    mixGetMusicType' music' >>= return . constantToMusicType
+    constantToMusicType <$> mixGetMusicType' music'
 
 musicTypeToConstant :: MusicType -> #{type Mix_MusicType}
 musicTypeToConstant NONE = #{const MUS_NONE}
@@ -327,7 +328,7 @@ foreign import ccall unsafe "Mix_GroupChannel"
 
 groupChannel :: Channel -> Int -> IO Bool
 groupChannel which tag =
-  mixGroupChannel' (fromIntegral which) (fromIntegral tag) >>= return . toBool
+  toBool <$> mixGroupChannel' (fromIntegral which) (fromIntegral tag)
 
 foreign import ccall unsafe "Mix_GroupChannels"
   mixGroupChannels' :: #{type int} -> #{type int} -> #{type int} -> IO #{type int}
@@ -337,32 +338,32 @@ groupChannels from to tag =
   let from' = fromIntegral from
       to'   = fromIntegral to
       tag'  = fromIntegral tag
-  in mixGroupChannels' from' to' tag' >>= return . toBool
+  in toBool <$> mixGroupChannels' from' to' tag'
 
 foreign import ccall unsafe "Mix_GroupAvailable"
   mixGroupAvailable' :: #{type int} -> IO #{type int}
 
 groupAvailable :: Int -> IO Int
-groupAvailable tag = mixGroupAvailable' (fromIntegral tag) >>= return . fromIntegral
+groupAvailable tag = fromIntegral <$> mixGroupAvailable' (fromIntegral tag)
 
 foreign import ccall unsafe "Mix_GroupCount"
   mixGroupCount' :: #{type int} -> IO #{type int}
 
 groupCount :: Int -> IO Int
-groupCount tag = mixGroupCount' (fromIntegral tag) >>= return . fromIntegral
+groupCount tag = fromIntegral <$> mixGroupCount' (fromIntegral tag)
 
 foreign import ccall unsafe "Mix_GroupOldest"
   mixGroupOldest' :: #{type int} -> IO #{type int}
 
 groupOldest :: Int -> IO Int
 groupOldest tag =
-  mixGroupOldest' (fromIntegral tag) >>= return . fromIntegral
+  fromIntegral <$> mixGroupOldest' (fromIntegral tag)
 
 foreign import ccall unsafe "Mix_GroupNewer"
   mixGroupNewer' :: #{type int} -> IO #{type int}
 
 groupNewer :: Int -> IO Int
-groupNewer tag = mixGroupNewer' (fromIntegral tag) >>= return . fromIntegral
+groupNewer tag = fromIntegral <$> mixGroupNewer' (fromIntegral tag)
 
 foreign import ccall unsafe "Mix_PlayChannelTimed"
   mixPlayChannelTimed' :: #{type int} -> Ptr ChunkStruct -> #{type int} -> #{type int} -> IO #{type int}
@@ -373,7 +374,7 @@ playChannelTimed channel chunk loops ticks =
       loops'   = fromIntegral loops
       ticks'   = fromIntegral ticks
   in withForeignPtr chunk $ \chunk' ->
-       mixPlayChannelTimed' channel' chunk' loops' ticks' >>= return . fromIntegral
+       fromIntegral <$> mixPlayChannelTimed' channel' chunk' loops' ticks'
 
 foreign import ccall unsafe "Mix_PlayMusic"
   mixPlayMusic' :: Ptr MusicStruct -> #{type int} -> IO #{type int}
@@ -420,7 +421,7 @@ foreign import ccall unsafe "Mix_Volume"
 
 volume :: Channel -> Volume -> IO Volume
 volume channel vol =
-  mixVolume' (fromIntegral channel) (volToCInt vol) >>= return . cIntToVol
+  cIntToVol <$> mixVolume' (fromIntegral channel) (volToCInt vol)
 
 foreign import ccall unsafe "Mix_VolumeChunk"
   mixVolumeChunk' :: Ptr ChunkStruct -> #{type int} -> IO #{type int}
@@ -428,7 +429,7 @@ foreign import ccall unsafe "Mix_VolumeChunk"
 volumeChunk :: Chunk -> Volume -> IO Volume
 volumeChunk chunk vol =
   withForeignPtr chunk $ \chunk' ->
-    mixVolumeChunk' chunk' (volToCInt vol) >>= return . cIntToVol
+    cIntToVol <$> mixVolumeChunk' chunk' (volToCInt vol)
 
 foreign import ccall unsafe "Mix_VolumeMusic"
   mixVolumeMusic' :: Ptr MusicStruct -> #{type int} -> IO #{type int}
@@ -436,7 +437,7 @@ foreign import ccall unsafe "Mix_VolumeMusic"
 volumeMusic :: Music -> Volume -> IO Volume
 volumeMusic music vol =
   withForeignPtr music $ \music' ->
-    mixVolumeMusic' music' (volToCInt vol) >>= return . cIntToVol
+    cIntToVol <$> mixVolumeMusic' music' (volToCInt vol)
 
 volToCInt :: Volume -> #{type int}
 volToCInt = fromIntegral . unwrapVolume
@@ -468,7 +469,7 @@ foreign import ccall unsafe "Mix_ExpireChannel"
 -- | returns number of channels set to expire
 expireChannel :: Channel -> Int -> IO Int
 expireChannel channel ticks =
-  mixExpireChannel' (fromIntegral channel) (fromIntegral ticks) >>= return . fromIntegral
+  fromIntegral <$> mixExpireChannel' (fromIntegral channel) (fromIntegral ticks)
 
 foreign import ccall unsafe "Mix_FadeOutChannel"
   mixFadeOutChannel' :: #{type int} -> #{type int} -> IO #{type int}
@@ -476,7 +477,7 @@ foreign import ccall unsafe "Mix_FadeOutChannel"
 -- | returns the number of channels set to fade out
 fadeOutChannel :: Channel -> Int -> IO Int
 fadeOutChannel channel ms =
-  mixFadeOutChannel' (fromIntegral channel) (fromIntegral ms) >>= return . fromIntegral
+  fromIntegral <$> mixFadeOutChannel' (fromIntegral channel) (fromIntegral ms)
 
 foreign import ccall unsafe "Mix_FadeOutGroup"
   mixFadeOutGroup' :: #{type int} -> #{type int} -> IO #{type int}
@@ -484,14 +485,13 @@ foreign import ccall unsafe "Mix_FadeOutGroup"
 -- | returns the number of channels set to fade out
 fadeOutGroup :: Int -> Int -> IO Int
 fadeOutGroup tag ms =
-  mixFadeOutGroup' (fromIntegral tag) (fromIntegral ms) >>= return . fromIntegral
+  fromIntegral <$> mixFadeOutGroup' (fromIntegral tag) (fromIntegral ms)
 
 foreign import ccall unsafe "Mix_FadeOutMusic"
   mixFadeOutMusic' :: #{type int} -> IO #{type int}
 
 fadeOutMusic :: Int -> IO Bool
-fadeOutMusic ms =
-  mixFadeOutMusic' (fromIntegral ms) >>= return . toBool
+fadeOutMusic ms = toBool <$> mixFadeOutMusic' (fromIntegral ms)
 
 foreign import ccall unsafe "Mix_FadingMusic"
   mixFadingMusic' :: IO #{type Mix_Fading}
@@ -503,14 +503,13 @@ constantToFading #{const MIX_FADING_IN} = FadingIn
 constantToFading _ = error "invalid fading value"
 
 fadingMusic :: IO Fading
-fadingMusic = mixFadingMusic' >>= return . constantToFading
+fadingMusic = constantToFading <$> mixFadingMusic'
 
 foreign import ccall unsafe "Mix_FadingChannel"
   mixFadingChannel' :: #{type int} -> IO #{type Mix_Fading}
 
 fadingChannel :: Channel -> IO Fading
-fadingChannel channel =
-  mixFadingChannel' (fromIntegral channel) >>= return . constantToFading
+fadingChannel channel = constantToFading <$> mixFadingChannel' (fromIntegral channel)
 
 foreign import ccall unsafe "Mix_Pause"
   mixPause' :: #{type int} -> IO ()
@@ -528,7 +527,7 @@ foreign import ccall unsafe "Mix_Paused"
   mixPaused' :: #{type int} -> IO #{type int}
 
 paused :: Channel -> IO Bool
-paused channel = mixPaused' (fromIntegral channel) >>= return . toBool
+paused channel = toBool <$> mixPaused' (fromIntegral channel)
 
 foreign import ccall unsafe "Mix_PauseMusic"
   pauseMusic :: IO ()
@@ -543,7 +542,7 @@ foreign import ccall unsafe "Mix_PausedMusic"
   mixPausedMusic' :: IO #{type int}
 
 pausedMusic :: IO Bool
-pausedMusic = mixPausedMusic' >>= return . toBool
+pausedMusic = toBool <$> mixPausedMusic'
 
 foreign import ccall unsafe "Mix_SetMusicPosition"
   mixSetMusicPosition' :: #{type double} -> IO #{type int}
@@ -557,13 +556,13 @@ foreign import ccall unsafe "Mix_Playing"
   mixPlaying' :: #{type int} -> IO #{type int} 
 
 playing :: Channel -> IO Bool
-playing channel = mixPlaying' (fromIntegral channel) >>= return . toBool
+playing channel = toBool <$> mixPlaying' (fromIntegral channel)
 
 foreign import ccall unsafe "Mix_PlayingMusic"
   mixPlayingMusic' :: IO #{type int} 
 
 playingMusic :: IO Bool
-playingMusic = mixPlayingMusic' >>= return . toBool
+playingMusic = toBool <$> mixPlayingMusic'
 
 foreign import ccall unsafe "Mix_SetMusicCMD"
   mixSetMusicCMD' :: CString -> IO #{type int}
@@ -586,7 +585,7 @@ foreign import ccall unsafe "Mix_GetSynchroValue"
   mixGetSynchroValue' :: IO #{type int}
 
 getSynchroValue :: IO Int
-getSynchroValue = mixGetSynchroValue' >>= return . fromIntegral
+getSynchroValue = fromIntegral <$> mixGetSynchroValue'
 
 foreign import ccall unsafe "Mix_SetSoundFonts"
   mixSetSoundFonts' :: CString -> IO Int
