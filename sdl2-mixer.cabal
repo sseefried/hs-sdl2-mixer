@@ -21,9 +21,12 @@ library
   includes:
     SDL.h,
     SDL_mixer.h
-  pkgconfig-depends:
-    sdl2 >= 2.0.0,
-    SDL2_mixer >= 2.0.0
+
+  if !os(windows)
+    pkgconfig-depends:
+      sdl2 >= 2.0.0,
+      SDL2_mixer >= 2.0.0
+
   build-depends:
     base >=4,
     bytestring,
