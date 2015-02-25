@@ -5,6 +5,7 @@ module Graphics.UI.SDL.Mixer.Types
   , MusicStruct
   , Music
   , MusicType(..)
+  , MusicHook
   , Channel
   , Volume
   , Fading(..)
@@ -20,7 +21,7 @@ import Control.Applicative
 data MusicStruct
 type Music = ForeignPtr MusicStruct
 
-foreign import ccall unsafe "&Mix_FreeMusic"
+foreign import ccall safe "&Mix_FreeMusic"
   mixFreeMusic' :: FunPtr (Ptr MusicStruct -> IO ())
 
 mkFinalizedMusic :: Ptr MusicStruct -> IO Music
@@ -50,7 +51,7 @@ instance Storable ChunkStruct where
 
 type Chunk = ForeignPtr ChunkStruct
 
-foreign import ccall unsafe "&Mix_FreeChunk"
+foreign import ccall safe "&Mix_FreeChunk"
   mixFreeChunk' :: FunPtr (Ptr ChunkStruct -> IO ())
 
 mkFinalizedChunk :: Ptr ChunkStruct -> IO Chunk
@@ -79,3 +80,4 @@ data Fading
    = NoFading | FadingOut | FadingIn
    deriving (Show, Eq)
 
+type MusicHook = Ptr Word8 -> Int -> IO ()
