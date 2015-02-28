@@ -65,7 +65,7 @@ module Graphics.UI.SDL.Mixer
   , setSynchroValue
   , getSynchroValue
   , setSoundFonts
-  , getSoundFonts
+--  , getSoundFonts
   , getChunk
   , closeAudio
   , hookMusic
@@ -610,11 +610,11 @@ setSoundFonts paths =
     ret <- mixSetSoundFonts' paths'
     handleErrorI "setSoundFonts" ret (== 0) (const $ return ())
 
-foreign import ccall safe "Mix_GetSoundFonts"
-  mixGetSoundFonts' :: IO CString
+--foreign import ccall unsafe "Mix_GetSoundFonts"
+--  mixGetSoundFonts' :: IO CString
 
-getSoundFonts :: IO String
-getSoundFonts = mixGetSoundFonts' >>= peekCString
+--getSoundFonts :: IO String
+--getSoundFonts = mixGetSoundFonts' >>= peekCString
 
 -- TODO Mix_EachSoundFont
 
